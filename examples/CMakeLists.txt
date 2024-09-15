@@ -81,7 +81,7 @@ if (WHISPER_SDL2)
     include(DefaultTargetOptions)
 
     target_include_directories(${TARGET} PUBLIC  ${SDL2_INCLUDE_DIRS})
-    target_link_libraries     (${TARGET} PRIVATE ${SDL2_LIBRARIES})
+    target_link_libraries     (${TARGET} PRIVATE ${SDL2_LIBRARIES} "-framework CoreAudio")
 
     set_target_properties(${TARGET} PROPERTIES POSITION_INDEPENDENT_CODE ON)
     set_target_properties(${TARGET} PROPERTIES FOLDER "libs")
