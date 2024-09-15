@@ -138,8 +138,34 @@ int main(int argc, char ** argv) {
     // init audio
 
     audio_async audio(params.length_ms);
-    if (!audio.init(params.capture_id, WHISPER_SAMPLE_RATE)) {
-        fprintf(stderr, "%s: audio.init() failed!\n", __func__);
+    // if (!audio.init(params.capture_id, WHISPER_SAMPLE_RATE)) {
+    // if (!audio.init(-1, WHISPER_SAMPLE_RATE)) {
+    //     fprintf(stderr, "%s: audio.init() failed!\n", __func__);
+    //     return 1;
+    // }
+        // Add this new code for device selection
+    std::vector<AudioDeviceInfo> devices = audio.getAudioDevices();
+    printf("Available audio devices:\n");
+    for (size_t i = 0; i < devices.size(); ++i) {
+        printf("%zu: %s (input: %s, output: %s)\n", 
+               i, 
+               devices[i].name.c_str(), 
+               devices[i].isInput ? "yes" : "no", 
+               devices[i].isOutput ? "yes" : "no");
+    }
+
+    int selectedDevice = -1;
+    printf("Enter the number of the device you want to capture from: ");
+    scanf("%d", &selectedDevice);
+
+    if (selectedDevice < 0 || selectedDevice >= static_cast<int>(devices.size())) {
+        fprintf(stderr, "Invalid device selection.\n");
+        return 1;
+    }
+
+    // Use the selected device for initialization
+    if (!audio.init(selectedDevice, WHISPER_SAMPLE_RATE)) {
+        fprintf(stderr, "%s: audio.init() failed for selected device!\n", __func__);
         return 1;
     }
 

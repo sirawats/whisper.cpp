@@ -1,4 +1,6 @@
 #include "common-sdl.h"
+#include <CoreAudio/CoreAudio.h>
+
 
 audio_async::audio_async(int len_ms) {
     m_len_ms = len_ms;
@@ -210,6 +212,67 @@ void audio_async::get(int ms, std::vector<float> & result) {
             memcpy(result.data(), &m_audio[s0], n_samples * sizeof(float));
         }
     }
+}
+
+std::vector<AudioDeviceInfo> audio_async::getAudioDevices() {
+    std::vector<AudioDeviceInfo> devices;
+
+    AudioObjectPropertyAddress propertyAddress = {
+        kAudioHardwarePropertyDevices,
+        kAudioObjectPropertyScopeGlobal,
+        kAudioObjectPropertyElementMain
+    };
+
+    UInt32 dataSize = 0;
+    OSStatus status = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &propertyAddress, 0, NULL, &dataSize);
+    if (status != kAudioHardwareNoError) {
+        fprintf(stderr, "AudioObjectGetPropertyDataSize (kAudioHardwarePropertyDevices) failed: %d\n", status);
+        return devices;
+    }
+
+    UInt32 deviceCount = dataSize / sizeof(AudioDeviceID);
+    AudioDeviceID* audioDevices = new AudioDeviceID[deviceCount];
+
+    status = AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, NULL, &dataSize, audioDevices);
+    if (status != kAudioHardwareNoError) {
+        fprintf(stderr, "AudioObjectGetPropertyData (kAudioHardwarePropertyDevices) failed: %d\n", status);
+        delete[] audioDevices;
+        return devices;
+    }
+
+    for (UInt32 i = 0; i < deviceCount; ++i) {
+        AudioDeviceID deviceID = audioDevices[i];
+
+        // Get device name
+        CFStringRef deviceName = NULL;
+        dataSize = sizeof(deviceName);
+        propertyAddress.mSelector = kAudioDevicePropertyDeviceNameCFString;
+        status = AudioObjectGetPropertyData(deviceID, &propertyAddress, 0, NULL, &dataSize, &deviceName);
+        if (status != kAudioHardwareNoError) {
+            fprintf(stderr, "AudioObjectGetPropertyData (kAudioDevicePropertyDeviceNameCFString) failed: %d\n", status);
+            continue;
+        }
+
+        char deviceNameBuf[256];
+        CFStringGetCString(deviceName, deviceNameBuf, sizeof(deviceNameBuf), kCFStringEncodingUTF8);
+        CFRelease(deviceName);
+
+        // Check if it's an input device
+        propertyAddress.mScope = kAudioDevicePropertyScopeInput;
+        propertyAddress.mSelector = kAudioDevicePropertyStreamConfiguration;
+        status = AudioObjectGetPropertyDataSize(deviceID, &propertyAddress, 0, NULL, &dataSize);
+        bool isInput = (status == kAudioHardwareNoError && dataSize > 0);
+
+        // Check if it's an output device
+        propertyAddress.mScope = kAudioDevicePropertyScopeOutput;
+        status = AudioObjectGetPropertyDataSize(deviceID, &propertyAddress, 0, NULL, &dataSize);
+        bool isOutput = (status == kAudioHardwareNoError && dataSize > 0);
+
+        devices.push_back({deviceNameBuf, isInput, isOutput});
+    }
+
+    delete[] audioDevices;
+    return devices;
 }
 
 bool sdl_poll_events() {

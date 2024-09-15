@@ -12,6 +12,12 @@
 // SDL Audio capture
 //
 
+struct AudioDeviceInfo {
+    std::string name;
+    bool isInput;
+    bool isOutput;
+};
+
 class audio_async {
 public:
     audio_async(int len_ms);
@@ -30,6 +36,9 @@ public:
 
     // get audio data from the circular buffer
     void get(int ms, std::vector<float> & audio);
+
+    std::vector<AudioDeviceInfo> getAudioDevices();
+
 
 private:
     SDL_AudioDeviceID m_dev_id_in = 0;
