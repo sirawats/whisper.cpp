@@ -2,6 +2,7 @@
 
 #include <SDL.h>
 #include <SDL_audio.h>
+#include <CoreAudio/CoreAudio.h>
 
 #include <atomic>
 #include <cstdint>
